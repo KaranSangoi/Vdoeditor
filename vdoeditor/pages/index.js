@@ -1,76 +1,48 @@
-import { useState, useEffect } from 'react';
+import React from "react"
+import Layout from "../components/Layout"
+import Post from "../components/Post"
+import prisma from '../lib/prisma';
 
-import styles from '../styles/Home.module.css';
-import VideoPlayer from '../components/VideoPlayer';
-import christmasTemplate from '../shared/json-templates/christmas';
+export const getStaticProps = async () => {
+   const feed = await prisma.post.findMany({
+      where: { published: true },
+      include: {
+         author: {
+            select: { name: true },
+         },
+      },
+   });
+   return { props: { feed } };
+};
 
-function Home() {
-   // User Input States
-   const [videoUrl, setVideoUrl] = useState('');
-   
-   // below data state will be set by json.merge array and similarly have set form in return snnipet with json.merge.map(data.map)
-   const [data, setData] = useState(christmasTemplate.merge);
 
-   const handleFormChange = (index, event) => {
-      let changedData = [...data];
-      changedData[index].replace = event.target.value;
-      setData(changedData);
-      console.log('openchangedata', data);
-   }
-
-   // Video Render States
-   const [videoId, setVideoId] = useState('');
-
-   // Function to fetch & render the video.
-   const createVideo = async () => {
-      try {
-         const response = await fetch('/api/video/render', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data })
-         });
-         
-         if (response.status === 404 || response.status === 405) {
-            setVideoId('');
-         } else {
-            const data = await response.json();
-            console.log(data);
-            setVideoId(data?.response.id);
-         }
-      } catch (err) {
-         console.log(err);
-      }
-   }
-
-   useEffect(() => {/* code... */}, [videoUrl]);
-
+const Blog = (props) => {
    return (
-      <>
-         <section className={styles.container}>
-            <div className="App">
-               <form>
-                  {data.map((input, index) => {
-                     return (
-                        <div key={index}>
-                           {input.find} :
-                           <input
-                              className={styles.inputField}
-                              name={input.name}
-                              placeholder="Name"
-                              value={input.replace}
-                              onChange={event => handleFormChange(index, event)}
-                           />
-                        </div>
-                     )
-                  })}
-               </form>
-            </div>
-            
-            <button className={styles.renderBtn} onClick={createVideo}>Render</button>
-            <VideoPlayer src={videoUrl} text="Video is loading" spinner />
-         </section>
-      </>
+      <Layout>
+         <div className="page">
+            <h1>Public Feed</h1>
+            <main>
+               {props.feed.map((post) => (
+                  <div key={post.id} className="post">
+                     <Post post={post} />
+                  </div>
+               ))}
+            </main>
+         </div>
+         <style jsx>{`
+        .post {
+          background: white;
+          transition: box-shadow 0.1s ease-in;
+        }
+        .post:hover {
+          box-shadow: 1px 1px 3px #aaa;
+        }
+        .post + .post {
+          margin-top: 2rem;
+        }
+      `}</style>
+      </Layout>
    )
 }
 
-export default Home;
+export default Blog
